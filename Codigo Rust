@@ -1,0 +1,77 @@
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::vec_deque::VecDeque;
+type Vertice = u64;
+type Graph = HashMap<Vertice, HashSet<Vertice>>;
+/**
+ * Se construye un grafo a partir de secuencias de pares padres e hijos
+ */
+
+pub fn from_pares(pares: &[(u64, u64)]) -> Graph {
+    let mut graph: Graph = HashMap::new();
+    for &(parent, child) in pares {
+        let children = graph.entry(parent).or_insert(HashSet::new());
+        children.insert(child);
+    }
+    return graph;
+}
+#[derive(Debug)]
+
+pub struct DFSResultado {
+    ordenado: VecDeque<HashSet<Vertice>>,
+    topologically_sorted: VecDeque<Vertice>,
+}
+/**
+ * Devuelve horas de inicio y finalización y padres de cada nodo
+ * Encuentra a partir de dfs como el bosque dfs
+ */
+pub fn dfs(graph: &Graph) -> DFSResultado {
+    let mut state = DFSResultado {
+        // El DFS  y la topologia
+        ordenado: VecDeque::new(),
+      topologically_sorted: VecDeque::new(),
+    };
+        // Vértices que se han visto hasta ahora
+    let mut seen: HashSet<Vertice> = HashSet::new();
+    // Tiempo actual
+    let mut time = 0;
+    fn dfs_visit (graph: &Graph,
+                  vertice: Vertice,
+                  time: &mut u64,
+                  seen: &mut HashSet<Vertice>,
+                  state: &mut DFSResultado) {     
+        seen.insert(vertice);
+        let mut branch = state.ordenado.pop_back().expect("No deberia estar vacio");
+        branch.insert(vertice);
+        state.ordenado.push_back(branch);
+        for neighbor in graph.get(&vertice).unwrap_or(&HashSet::new()) {
+            if !seen.contains(neighbor) {
+                dfs_visit(graph, *neighbor, time, seen, state);
+            }
+        }   
+      state.topologically_sorted.push_front(vertice);
+    };
+    for vertice in graph.keys() {
+        if !seen.contains(vertice) {
+            state.ordenado.push_back(HashSet::new());
+            dfs_visit(graph, *vertice, &mut time, &mut seen, &mut state);
+        }
+    }
+    return state;
+}
+// funcion que ordena el grafo en forma topologica
+fn topological_sort(graph: &Graph) -> VecDeque<Vertice> {
+    let DFSResultado{topologically_sorted, ..} = dfs(graph);
+    return topologically_sorted
+}
+//funcion prinicial donde se colocan los nodos para la generacion 
+//de un grafo
+fn main() {
+    let pares = [(1,2),(2,3),(2,4),(3,5),(5,6),(6,7)];
+    let g = from_pares(&pares);
+   println!("Grafo generado:");
+    println!("{:?}", g);
+   println!("Arbol generado:");
+    println!("{:?}", dfs(&g));
+  println!("{:?}", topological_sort(&g));
+}
